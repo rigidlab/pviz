@@ -3,6 +3,9 @@ from bokeh.models import HoverTool
 from bokeh.layouts import column,layout,row
 
 class space():
+    """
+    Figure class that plot state variables against one another
+    """
     def __init__(self,width,height):
         hover=HoverTool(tooltips=[("x,y","$x,$y")])
         tools=["pan,box_zoom,wheel_zoom,save,reset,crosshair",hover]
@@ -26,6 +29,9 @@ class space():
         return self.p
 
 class state():
+    """
+    Figure class that plot state variables vs time
+    """
     def __init__(self,width,height):
         hover=HoverTool(tooltips=[("x,y","$x,$y")])
         tools=["pan,box_zoom,wheel_zoom,save,reset,crosshair",hover]
@@ -36,10 +42,7 @@ class state():
 
     def add_circle(self,x,y,radius=1,**kwargs):
         self.p.circle(x=x, y=y, radius=radius,fill_color=None,**kwargs)
-
-    def add_rectangle(self,x,y,w=1,h=1):
-        self.p.rect(x,y,w,h)
-
+ 
     def plot(self,name=None):
         if name:
             output_file(name)
@@ -53,5 +56,4 @@ if __name__=="__main__":
     p.add_circle(2,2,radius=0.1)
     p.add_rectangle(1,1)
     p.plot()
-    #show(column(p.get_figure(),p2.get_figure()))
 
