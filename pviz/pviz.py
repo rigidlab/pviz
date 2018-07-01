@@ -1,6 +1,9 @@
+# Import essential numerical libaries
 import math
 import numpy as np
 import pandas as pd
+
+# Import essential bokeh plotting tools
 from bokeh.plotting import figure, output_file, show, save
 from bokeh.models import HoverTool, CustomJS, ColumnDataSource,Slider
 from bokeh.models import Arrow, NormalHead
