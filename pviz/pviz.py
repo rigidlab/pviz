@@ -22,11 +22,13 @@ class space():
 
     def add_circle(self,x,y,**kwargs):
         self.p.circle(x=x, y=y,fill_color=None,**kwargs)
-        
+
     def add_vector(self):    
         self.p.add_layout(Arrow(end=NormalHead(size=5), line_color="red",
-                                x_start='x',y_start='y',x_end='x+0.8',y_end='y+0.6',
-                                source=self.source))
+            x_start='x',y_start='y',x_end='x+0.8',
+            y_end='y+0.6',
+            source=self.source))
+
     def add_line(self,**kwargs):
         self.p.line(source=self.source,**kwargs)
 
@@ -62,14 +64,15 @@ class state():
             days=["%m/%d/%Y %H:%M:%S"],
             months=["%m/%d/%Y %H:%M:%S"],
             years=["%m/%d/%Y %H:%M:%S"],
-        )   
+        ) 
         self.p.xaxis.major_label_orientation = math.pi/4
         self.source=source
 
-    def add_vector(self):    
+    def add_vector(self): 
         self.p.add_layout(Arrow(end=NormalHead(size=5), line_color="red",
-                                x_start='x',y_start='y',x_end='x+0.8',y_end='y+0.6',
-                                source=self.source))
+            x_start='x',y_start='y',x_end='x+0.8',y_end='y+0.6',
+            source=self.source))
+
     def add_line(self,t,state,color=None):
         self.p.line(x=t,y=state,source=self.source,legend=dict(value=state),
             line_color=color)
@@ -90,7 +93,7 @@ class state():
     def get_figure(self):
         return self.p
 
-if __name__=="__main__":
+def test():
     df=pd.read_csv("fmcl.csv",header=0)
     df['t']=pd.to_datetime(df['t'],unit='s')
     print (df.head())
@@ -100,10 +103,14 @@ if __name__=="__main__":
     p.add_line(x='x',y='y')
     #p.plot()
      
-    ymin,ymax = (df.loc[:, ['x', 'y']].min().min(),df.loc[:, ['x', 'y']].max().max())
+    ymin,ymax = (df.loc[:, ['x', 'y']].min().min(),
+        df.loc[:, ['x', 'y']].max().max())
     delta=ymax-ymin
     p2 = state(df,y_range=(ymin-delta/2,ymax+delta/2))
     p2.add_circle('t','y',color='red')
     p2.add_circle('t','x',color='green')
     show(column(p.get_figure(),p2.get_figure()))
     #show(p2.get_figure())
+
+if __name__=="__main__":
+    print "Running"
