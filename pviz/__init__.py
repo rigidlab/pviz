@@ -1,1 +1,1 @@
-from pviz import *
+from pviz.core import *
