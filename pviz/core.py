@@ -9,6 +9,7 @@ from bokeh.models import HoverTool, CustomJS, ColumnDataSource,Slider
 from bokeh.models import Arrow, NormalHead
 from bokeh.layouts import column,layout,row
 from bokeh.models.formatters import DatetimeTickFormatter
+
 class base():
     """
     Base figure class
@@ -95,6 +96,6 @@ class time(base):
     def get_figure(self):
         return self.p
 
-def display(pList,name="pviz.html"):
+def display(pList,name="pviz.html",**kwargs):
     output_file(name)
     show(layout([p.get_figure() for p in pList],sizing_mode="stretch_both"))
