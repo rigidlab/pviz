@@ -7,8 +7,9 @@ import pandas as pd
 from bokeh.plotting import figure, output_file, show, save
 from bokeh.models import HoverTool, CustomJS, ColumnDataSource,Slider
 from bokeh.models import Arrow, NormalHead
-from bokeh.layouts import column,layout,row
+from bokeh.layouts import column,layout,row,widgetbox
 from bokeh.models.formatters import DatetimeTickFormatter
+from bokeh.models import CustomJS, Slider
 
 class base():
     """
@@ -20,7 +21,7 @@ class base():
         self.p = figure(logo=None,tools=tools,**kwargs)
         #self.p.xgrid.grid_line_color=None
         #self.p.ygrid.grid_line_color=None
-        self.source=source
+        self.source=ColumnDataSource(source)
     
     def save(self,name="space.html",pshow=True):
         output_file(name)
@@ -43,8 +44,26 @@ class space(base):
 
     def plot(self,x,y,line=False,**kwargs):
         self.p.circle(x, y,fill_color=None,source=self.source,**kwargs)
+        self.p.xaxis.axis_label = x
+        self.p.yaxis.axis_label = y
         if line:
             self.p.line(x,y,source=self.source,**kwargs)
+        return self
+
+    def slider(self):
+        callback = CustomJS(args=dict(source=self.source), code="""
+            var data = source.data;
+            var i = index.value;
+            var x = data['x'];
+            var y = data['y'];
+            x = data['x'][i];
+            y = data['y'][i];
+            source.change.emit();
+        """)
+        self.i_slider = Slider(start=self.source.data["index"][0], end=self.source.data["index"][-1],
+                    value=0, step=1,
+                    title="index",callback=callback)
+        self.wb = widgetbox(self.i_slider)
         return self
 
     def add_vector(self):    
@@ -98,4 +117,5 @@ class time(base):
 
 def display(pList,name="pviz.html",**kwargs):
     output_file(name)
-    show(layout([p.get_figure() for p in pList],sizing_mode="stretch_both"))
+    show(layout([[s for s in row ] for row in pList],
+        sizing_mode="stretch_both"))
