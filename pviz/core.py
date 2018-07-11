@@ -15,15 +15,18 @@ class base():
     """
     Base figure class
     """
-    def __init__(self,source,**kwargs):
-        hover=HoverTool(tooltips=[("x,y","$x,$y")])
+    def __init__(self,source,t='t',**kwargs):
         tools=["pan,box_zoom,wheel_zoom,save,reset"]
-        self.p = figure(logo=None,tools=tools,**kwargs)
+        self.p = figure(logo=None,tools=tools,
+            **kwargs)
         #self.p.xgrid.grid_line_color=None
         #self.p.ygrid.grid_line_color=None
+        if t:
+            source[t]=pd.to_datetime(source[t],unit='s')
+            source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         self.source=ColumnDataSource(source)
     
-    def save(self,name="space.html",pshow=True):
+    def save(self,name="pviz.html",pshow=True):
         output_file(name)
         save(self.p)
         if pshow:
@@ -40,7 +43,7 @@ class space(base):
         super().__init__(source,**kwargs)
         self.p.aspect_scale=1
         self.p.match_aspect=True
-        self.p.sizing_mode="scale_height"
+        #self.p.sizing_mode="scale_height"
 
     def plot(self,x,y,line=False,**kwargs):
         self.p.circle(x, y,fill_color=None,source=self.source,**kwargs)
@@ -48,6 +51,11 @@ class space(base):
         self.p.yaxis.axis_label = y
         if line:
             self.p.line(x,y,source=self.source,**kwargs)
+        return self
+
+    def hover(self,hList):
+        hov=HoverTool(tooltips=[(h,"@{}".format(h)) for h in hList])
+        self.p.add_tools(hov)
         return self
 
     def slider(self):
@@ -63,7 +71,7 @@ class space(base):
         self.i_slider = Slider(start=self.source.data["index"][0], end=self.source.data["index"][-1],
                     value=0, step=1,
                     title="index",callback=callback)
-        self.wb = widgetbox(self.i_slider)
+        self.wb = widgetbox(self.i_slider,height=100,width=400)
         return self
 
     def add_vector(self):    
@@ -72,7 +80,13 @@ class space(base):
             y_end='y+0.6',
             source=self.source))
         return self
-
+    
+    def save(self,name="space.html",pshow=True):
+        output_file(name)
+        save(self.p)
+        if pshow:
+            show(self.p)
+    
     def add_line(self,**kwargs):
         self.p.line(source=self.source,**kwargs)
 
@@ -82,7 +96,7 @@ class time(base):
     """
     def __init__(self,source,**kwargs):
         super().__init__(source,**kwargs)
-        self.p.sizing_mode="stretch_both"
+        #self.p.sizing_mode="stretch_both"
         self.p.xaxis.formatter=DatetimeTickFormatter(
             minsec=["%m/%d/%Y %H:%M:%S"],
             minutes=["%m/%d/%Y %H:%M:%S"],
@@ -106,6 +120,11 @@ class time(base):
             line_color=color)
         return self
 
+    def hover(self,hList):
+        hov=HoverTool(tooltips=[(h,"@{}".format(h)) for h in hList])
+        self.p.add_tools(hov)
+        return self
+
     def save(self,name="time.html",pshow=True):
         output_file(name)
         save(self.p)
@@ -117,5 +136,9 @@ class time(base):
 
 def display(pList,name="pviz.html",**kwargs):
     output_file(name)
-    show(layout([[s for s in row ] for row in pList],
+    #show(layout(children=[row([s for s in r ]) for r in pList],
+    #   sizing_mode="stretch_both"))
+    show(layout([[s for s in r] for r in pList],
         sizing_mode="stretch_both"))
+
+    
