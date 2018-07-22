@@ -118,6 +118,8 @@ class time(base):
             line_color=color,fill_color=color)
         self.p.line(x=t,y=state,source=self.source,legend=dict(value=state),
             line_color=color)
+        self.p.xaxis.axis_label = t
+        self.p.yaxis.axis_label = state
         return self
 
     def hover(self,hList):
@@ -138,7 +140,7 @@ def display(pList,name="pviz.html",**kwargs):
     output_file(name)
     #show(layout(children=[row([s for s in r ]) for r in pList],
     #   sizing_mode="stretch_both"))
-    show(layout([[s for s in r] for r in pList],
+    show(layout([[s.p for s in r] for r in pList],
         sizing_mode="stretch_both"))
 
     
