@@ -24,6 +24,7 @@ class base():
         if t:
             source[t]=pd.to_datetime(source[t],unit='s')
             source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        self.df=source
         self.source=ColumnDataSource(source)
     
     def save(self,name="pviz.html",pshow=True):
@@ -74,10 +75,15 @@ class space(base):
         self.wb = widgetbox(self.i_slider,height=100,width=400)
         return self
 
-    def add_vector(self):    
-        self.p.add_layout(Arrow(end=NormalHead(size=5), line_color="red",
-            x_start='x',y_start='y',x_end='x+0.8',
-            y_end='y+0.6',
+    def vector(self,x,y,theta,length,color='black'):    
+        self.df['x_end'] = self.df[x] + self.df[theta].apply(lambda x: length*math.cos(x))
+        self.df['y_end'] = self.df[y] + self.df[theta].apply(lambda x: length*math.sin(x))
+        print(self.df.head())
+        for name in ['x_end','y_end']:
+            self.source.add(self.df[name],name=name)
+        print(self.source.data)
+        self.p.add_layout(Arrow(end=NormalHead(size=3), line_color=color,
+            x_start=x,y_start=y,x_end='x_end',y_end='y_end',
             source=self.source))
         return self
     
