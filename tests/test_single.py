@@ -1,8 +1,5 @@
 import pandas as pd
-import copy
-from bokeh.plotting import show
 from pviz import space,time,display
-from bokeh.layouts import column,layout,row,gridplot
 
 def test_space():
     df=pd.read_csv("fmcl.csv",header=0)

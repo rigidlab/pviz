@@ -6,7 +6,7 @@ import pandas as pd
 # Import essential bokeh plotting tools
 from bokeh.plotting import figure, output_file, show, save
 from bokeh.models import HoverTool, CustomJS, ColumnDataSource,Slider
-from bokeh.models import Arrow, NormalHead
+from bokeh.models import Arrow, NormalHead,Range1d
 from bokeh.layouts import column,layout,row,widgetbox
 from bokeh.models.formatters import DatetimeTickFormatter
 from bokeh.models import CustomJS, Slider
@@ -26,6 +26,7 @@ class base():
             source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         self.df=source
         self.source=ColumnDataSource(source)
+        #self.source=source
     
     def save(self,name="pviz.html",pshow=True):
         output_file(name)
@@ -45,13 +46,22 @@ class space(base):
         self.p.aspect_scale=1
         self.p.match_aspect=True
         #self.p.sizing_mode="scale_height"
+    
+    def range(self,x_start,x_end,y_start,y_end):
+        self.p.x_range=Range1d(x_start,x_end)
+        self.p.y_range=Range1d(y_start,y_end)
+        return self
 
-    def plot(self,x,y,line=False,**kwargs):
-        self.p.circle(x, y,fill_color=None,source=self.source,**kwargs)
+    def plot(self,x,y,line=False,slice=None,**kwargs):
+        if slice:
+            source = ColumnDataSource(self.df.iloc[slice,:])
+        else:
+            source = self.source
+        self.p.circle(x, y,fill_color=None,source=source,**kwargs)
         self.p.xaxis.axis_label = x
         self.p.yaxis.axis_label = y
         if line:
-            self.p.line(x,y,source=self.source,**kwargs)
+            self.p.line(x,y,source=self.source)
         return self
 
     def hover(self,hList):
@@ -75,16 +85,21 @@ class space(base):
         self.wb = widgetbox(self.i_slider,height=100,width=400)
         return self
 
-    def vector(self,x,y,theta,length,color='black'):    
-        self.df['x_end'] = self.df[x] + self.df[theta].apply(lambda x: length*math.cos(x))
-        self.df['y_end'] = self.df[y] + self.df[theta].apply(lambda x: length*math.sin(x))
-        print(self.df.head())
+    def vector(self,x,y,theta,length,size=3,color='black',slice=None):
+        if slice:
+            slice_df = self.df.iloc[slice,:]
+            source = ColumnDataSource(slice_df)
+        else:
+            source = self.source  
+
+        slice_df['x_end'] = slice_df[x] + slice_df[theta].apply(lambda x: length*math.cos(x))
+        slice_df['y_end'] = slice_df[y] + slice_df[theta].apply(lambda x: length*math.sin(x))
         for name in ['x_end','y_end']:
-            self.source.add(self.df[name],name=name)
-        print(self.source.data)
-        self.p.add_layout(Arrow(end=NormalHead(size=3), line_color=color,
+            source.add(slice_df[name],name=name)
+        self.p.add_layout(Arrow(end=NormalHead(size=size), line_color=color,
             x_start=x,y_start=y,x_end='x_end',y_end='y_end',
-            source=self.source))
+            source=source))
+        self.p.circle(x=x,y=y,color=color,size=size,source=source)
         return self
     
     def save(self,name="space.html",pshow=True):
@@ -92,9 +107,6 @@ class space(base):
         save(self.p)
         if pshow:
             show(self.p)
-    
-    def add_line(self,**kwargs):
-        self.p.line(source=self.source,**kwargs)
 
 class time(base):
     """
