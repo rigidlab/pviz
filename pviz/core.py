@@ -16,7 +16,7 @@ class base():
     Base figure class
     """
     def __init__(self,source,t='t',**kwargs):
-        tools=["pan,box_zoom,wheel_zoom,save,reset"]
+        tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
         self.p = figure(logo=None,tools=tools,
             **kwargs)
         #self.p.xgrid.grid_line_color=None
@@ -47,9 +47,11 @@ class space(base):
         self.p.match_aspect=True
         #self.p.sizing_mode="scale_height"
     
-    def range(self,x_start,x_end,y_start,y_end):
-        self.p.x_range=Range1d(x_start,x_end)
-        self.p.y_range=Range1d(y_start,y_end)
+    def range(self,x_start=None,x_end=None,y_start=None,y_end=None):
+        if x_start and x_end:
+            self.p.x_range=Range1d(x_start,x_end)
+        if y_start and y_end:
+            self.p.y_range=Range1d(y_start,y_end)   
         return self
 
     def plot(self,x,y,line=False,slice=None,**kwargs):
