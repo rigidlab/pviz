@@ -17,10 +17,7 @@ class base():
     """
     def __init__(self,source,t='t',**kwargs):
         tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
-        self.p = figure(logo=None,tools=tools,
-            **kwargs)
-        #self.p.xgrid.grid_line_color=None
-        #self.p.ygrid.grid_line_color=None
+        self.p = figure(logo=None,tools=tools,**kwargs)
         if t:
             source[t]=pd.to_datetime(source[t],unit='s')
             source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -41,12 +38,19 @@ class space(base):
     """
     Figure class that plot state variables against one another
     """
-    def __init__(self,source,**kwargs):
+    def __init__(self,source,xnum_ticks=None,ynum_ticks=None,**kwargs):
         super().__init__(source,**kwargs)
         self.p.aspect_scale=1
         self.p.match_aspect=True
-        #self.p.sizing_mode="scale_height"
-    
+        self.p.sizing_mode="scale_width"
+        self.p.xgrid.grid_line_color=None
+        self.p.ygrid.grid_line_color=None
+        if xnum_ticks and ynum_ticks:
+            self.p.xgrid[0].ticker.desired_num_ticks=xnum_ticks
+            self.p.xgrid[0].ticker.num_minor_ticks=5
+            self.p.ygrid[0].ticker.desired_num_ticks=ynum_ticks
+            self.p.ygrid[0].ticker.num_minot_ticks=5
+
     def range(self,x_start=None,x_end=None,y_start=None,y_end=None):
         if x_start and x_end:
             self.p.x_range=Range1d(x_start,x_end)
@@ -63,7 +67,7 @@ class space(base):
         self.p.xaxis.axis_label = x
         self.p.yaxis.axis_label = y
         if line:
-            self.p.line(x,y,source=self.source)
+            self.p.line(x,y,source=source)
         return self
 
     def hover(self,hList):
@@ -102,6 +106,7 @@ class space(base):
             x_start=x,y_start=y,x_end='x_end',y_end='y_end',
             source=source))
         self.p.circle(x=x,y=y,color=color,size=size,source=source)
+        self.p.circle(x='x_end',y='y_end',color=color,size=0,source=source)
         return self
     
     def save(self,name="space.html",pshow=True):
