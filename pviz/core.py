@@ -1,5 +1,6 @@
 # Import essential numerical libaries
 import math
+import random
 import numpy as np
 import pandas as pd
 
@@ -10,21 +11,25 @@ from bokeh.models import Arrow, NormalHead,Range1d
 from bokeh.layouts import column,layout,row,widgetbox
 from bokeh.models.formatters import DatetimeTickFormatter
 from bokeh.models import CustomJS, Slider
+from bokeh.io import curdoc
 
 class base():
     """
     Base figure class
     """
-    def __init__(self,source,t='t',**kwargs):
+    def __init__(self,**kwargs):
         tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
         self.p = figure(logo=None,tools=tools,**kwargs)
+        
+    def load(self,source,t='t'):
         if t:
             source[t]=pd.to_datetime(source[t],unit='s')
             source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         self.df=source
         self.source=ColumnDataSource(source)
         #self.source=source
-    
+        return self
+ 
     def save(self,name="pviz.html",pshow=True):
         output_file(name)
         save(self.p)
@@ -38,8 +43,8 @@ class space(base):
     """
     Figure class that plot state variables against one another
     """
-    def __init__(self,source,xnum_ticks=None,ynum_ticks=None,**kwargs):
-        super().__init__(source,**kwargs)
+    def __init__(self,xnum_ticks=None,ynum_ticks=None,**kwargs):
+        super().__init__(**kwargs)
         self.p.aspect_scale=1
         self.p.match_aspect=True
         self.p.sizing_mode="scale_width"
@@ -50,25 +55,64 @@ class space(base):
             self.p.xgrid[0].ticker.num_minor_ticks=5
             self.p.ygrid[0].ticker.desired_num_ticks=ynum_ticks
             self.p.ygrid[0].ticker.num_minot_ticks=5
+        self.current_state=ColumnDataSource(pd.DataFrame({}))
+        self.current_index=0
+        self.length=0
 
-    def range(self,x_start=None,x_end=None,y_start=None,y_end=None):
-        if x_start and x_end:
-            self.p.x_range=Range1d(x_start,x_end)
-        if y_start and y_end:
-            self.p.y_range=Range1d(y_start,y_end)   
-        return self
-
-    def plot(self,x,y,line=False,slice=None,**kwargs):
+    def plot(self,x,y,realtime=False,line=False,slice=None,**kwargs):
+        if realtime:
+            self.current_x = x
+            self.current_y = y
+            self.current_theta = 'theta' 
+            source = self.current_state
+            curdoc().add_periodic_callback(self.update,50)
+        
         if slice:
             source = ColumnDataSource(self.df.iloc[slice,:])
-        else:
-            source = self.source
+
         self.p.circle(x, y,fill_color=None,source=source,**kwargs)
         self.p.xaxis.axis_label = x
         self.p.yaxis.axis_label = y
         if line:
             self.p.line(x,y,source=source)
         return self
+    
+    def vector(self,x,y,theta,length,realtime=False,size=3,color='black',slice=None):
+        source = self.source
+        if realtime:
+            self.current_x = x
+            self.current_y = y
+            self.current_theta = theta
+            self.length=length
+            source = self.current_state
+            curdoc().add_periodic_callback(self.update,100)
+        if slice:
+            source = ColumnDataSource(self.df.iloc[slice,:])
+        if not realtime:
+            source.data['x_end'] = source.data[x] + length*np.cos(source.data[theta])
+            source.data['y_end'] = source.data[y] + length*np.sin(source.data[theta])
+        self.p.add_layout(Arrow(end=NormalHead(size=size), line_color=color,
+                x_start=x,y_start=y,x_end='x_end',y_end='y_end',
+                source=source))
+        self.p.circle(x=x,y=y,color=color,size=size,source=source)
+        self.p.circle(x='x_end',y='y_end',color=color,size=0,source=source)
+        return self
+
+    def update(self):
+        if self.current_index == len(self.df.index):
+            self.current_index = 0
+        x = self.df[self.current_x][self.current_index]
+        y = self.df[self.current_y][self.current_index]
+        theta = self.df[self.current_theta][self.current_index]
+        x_end = x + self.length*math.cos(theta)
+        y_end = y + self.length*math.sin(theta)
+        self.current_state.data['index']=[self.current_index]
+        self.current_state.data[self.current_x]=[x]
+        self.current_state.data[self.current_y]=[y]
+        self.current_state.data[self.current_theta]=[theta]
+        self.current_state.data['x_end']=[x_end]
+        self.current_state.data['y_end']=[y_end]
+        self.current_index +=1
 
     def hover(self,hList):
         hov=HoverTool(tooltips=[(h,"@{}".format(h)) for h in hList])
@@ -91,29 +135,18 @@ class space(base):
         self.wb = widgetbox(self.i_slider,height=100,width=400)
         return self
 
-    def vector(self,x,y,theta,length,size=3,color='black',slice=None):
-        if slice:
-            slice_df = self.df.iloc[slice,:]
-            source = ColumnDataSource(slice_df)
-        else:
-            source = self.source  
-
-        slice_df['x_end'] = slice_df[x] + slice_df[theta].apply(lambda x: length*math.cos(x))
-        slice_df['y_end'] = slice_df[y] + slice_df[theta].apply(lambda x: length*math.sin(x))
-        for name in ['x_end','y_end']:
-            source.add(slice_df[name],name=name)
-        self.p.add_layout(Arrow(end=NormalHead(size=size), line_color=color,
-            x_start=x,y_start=y,x_end='x_end',y_end='y_end',
-            source=source))
-        self.p.circle(x=x,y=y,color=color,size=size,source=source)
-        self.p.circle(x='x_end',y='y_end',color=color,size=0,source=source)
-        return self
-    
     def save(self,name="space.html",pshow=True):
         output_file(name)
         save(self.p)
         if pshow:
             show(self.p)
+    
+    def grid(self,color="gray",alpha=0.3):
+        self.p.xgrid.grid_line_color=color
+        self.p.ygrid.grid_line_color=color
+        self.p.xgrid.grid_line_alpha=alpha
+        self.p.ygrid.grid_line_alpha=alpha
+        return self
 
 class time(base):
     """
@@ -161,11 +194,15 @@ class time(base):
     def get_figure(self):
         return self.p
 
-def display(pList,name="pviz.html",**kwargs):
-    output_file(name)
+def display(pList,name="pviz.html",realtime=False,**kwargs):
     #show(layout(children=[row([s for s in r ]) for r in pList],
     #   sizing_mode="stretch_both"))
-    show(layout([[s.p for s in r] for r in pList],
+    layoutr=(layout([[s.p for s in r] for r in pList],
         sizing_mode="stretch_both"))
 
+    if not realtime:
+        output_file(name)
+        show(layoutr)
+    else:
+        curdoc().add_root(layoutr)
     
