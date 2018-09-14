@@ -12,6 +12,7 @@ def test_realtime():
     #s.p.x_range.follow_interval = 100
     #s.p.x_range.range_padding =0
     s.plot("x","y",realtime=True,radius=0.3)
-    display([[s]],name="test_vector.html",realtime=True)
+    #display([[s]],name="test_vector.html",realtime=True)
+    s.serve()
 
 test_realtime()
