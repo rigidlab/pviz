@@ -24,8 +24,8 @@ class base():
     Base figure class
     """
     def __init__(self,**kwargs):
-        tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
-        self.p = figure(logo=None,tools=tools,**kwargs)
+        tools=["pan,box_zoom,wheel_zoom,save,reset"]
+        self.p = figure(logo=None,active_scroll="wheel_zoom",tools=tools,**kwargs)
 
     def load(self,source,t='t'):
         if t:
@@ -49,9 +49,7 @@ class space(base):
     Figure class that plot state variables against one another
     """
     def __init__(self,xnum_ticks=None,ynum_ticks=None,**kwargs):
-        #super().__init__(**kwargs)
-        tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
-        self.p = figure(logo=None,tools=tools,**kwargs)
+        super().__init__(**kwargs)
         self.p.aspect_scale=1
         self.p.match_aspect=True
         self.p.sizing_mode="scale_width"
@@ -70,7 +68,7 @@ class space(base):
         if realtime:
             self.current_x = x
             self.current_y = y
-            self.current_theta = 'theta' 
+            self.current_theta = 'theta'
             source = self.current_state
             curdoc().add_periodic_callback(self.update,update_interval)
         if slice:
@@ -163,7 +161,7 @@ class space(base):
         #server.start()
         server.run_until_shutdown()
         return self
-    
+
     def interact(self):
         self.button = Button(label='► Play', width=60)
         self.button.on_click(self.update)
@@ -218,10 +216,10 @@ class time(base):
 def display(pList,name="pviz.html",realtime=False,**kwargs):
     layoutr=(layout([[s.p for s in r] for r in pList],
         sizing_mode="stretch_both"))
-    
+
     if not realtime:
         output_file(name)
         show(layoutr)
     else:
         curdoc().add_root(layoutr)
-    
+
