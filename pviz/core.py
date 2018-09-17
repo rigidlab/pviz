@@ -1,17 +1,19 @@
 # Import essential numerical libaries
 import math
 import random
+import copy
 import time as timer
 import numpy as np
 import pandas as pd
-
+#
+from tornado.ioloop import IOLoop
 # Import essential bokeh plotting tools
 from bokeh.plotting import figure, output_file, show, save
 from bokeh.models import HoverTool, CustomJS, ColumnDataSource,Slider
 from bokeh.models import Arrow, NormalHead,Range1d
 from bokeh.layouts import column,layout,row,widgetbox
 from bokeh.models.formatters import DatetimeTickFormatter
-from bokeh.models import CustomJS, Slider
+from bokeh.models import CustomJS, Slider,Button
 from bokeh.io import curdoc
 from bokeh.server.server import Server
 from bokeh.application import Application
@@ -31,7 +33,6 @@ class base():
             source['ts']=source[t].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
         self.df=source
         self.source=ColumnDataSource(source)
-        #self.source=source
         return self
 
     def save(self,name="pviz.html",pshow=True):
@@ -48,7 +49,9 @@ class space(base):
     Figure class that plot state variables against one another
     """
     def __init__(self,xnum_ticks=None,ynum_ticks=None,**kwargs):
-        super().__init__(**kwargs)
+        #super().__init__(**kwargs)
+        tools=["pan,box_zoom,wheel_zoom,xwheel_zoom,ywheel_zoom,save,reset"]
+        self.p = figure(logo=None,tools=tools,**kwargs)
         self.p.aspect_scale=1
         self.p.match_aspect=True
         self.p.sizing_mode="scale_width"
@@ -63,17 +66,15 @@ class space(base):
         self.current_index=0
         self.length=0
 
-    def plot(self,x,y,realtime=False,line=False,update_interval=200,slice=None,**kwargs):
+    def plot(self,x,y,realtime=False,line=False,update_interval=100,slice=None,**kwargs):
         if realtime:
             self.current_x = x
             self.current_y = y
             self.current_theta = 'theta' 
             source = self.current_state
-            #curdoc().add_periodic_callback(self.update,update_interval)
-
+            curdoc().add_periodic_callback(self.update,update_interval)
         if slice:
             source = ColumnDataSource(self.df.iloc[slice,:])
-
         self.p.circle(x, y,fill_color=None,source=source,**kwargs)
         self.p.xaxis.axis_label = x
         self.p.yaxis.axis_label = y
@@ -81,7 +82,7 @@ class space(base):
             self.p.line(x,y,source=source)
         return self
 
-    def vector(self,x,y,theta,length,realtime=False,update_interval=200,size=3,color='black',slice=None):
+    def vector(self,x,y,theta,length,realtime=False,update_interval=100,size=3,color='black',slice=None):
         source = self.source
         if realtime:
             self.current_x = x
@@ -89,15 +90,13 @@ class space(base):
             self.current_theta = theta
             self.length=length
             source = self.current_state
-            #curdoc().add_periodic_callback(self.update,update_interval)
+            curdoc().add_periodic_callback(self.update,update_interval)
         if slice:
             source = ColumnDataSource(self.df.iloc[slice,:])
         if not realtime:
             source.data['x_end'] = source.data[x] + length*np.cos(source.data[theta])
             source.data['y_end'] = source.data[y] + length*np.sin(source.data[theta])
-        self.p.add_layout(Arrow(end=NormalHead(size=size), line_color=color,
-                x_start=x,y_start=y,x_end='x_end',y_end='y_end',
-                source=source))
+        self.p.add_layout(Arrow(end=NormalHead(size=size), line_color=color,x_start=x,y_start=y,x_end='x_end',y_end='y_end',source=source))
         self.p.circle(x=x,y=y,color=color,size=size,source=source)
         self.p.circle(x='x_end',y='y_end',color=color,size=0,source=source)
         return self
@@ -116,7 +115,6 @@ class space(base):
         self.current_state.data[self.current_theta]=[theta]
         self.current_state.data['x_end']=[x_end]
         self.current_state.data['y_end']=[y_end]
-        print(self.current_state.data)
         self.current_index +=1
 
     def hover(self,hList):
@@ -154,7 +152,7 @@ class space(base):
         return self
 
     def make_document(self,doc):
-        doc.add_periodic_callback(self.update,200)
+        doc.add_periodic_callback(self.update,100)
         doc.title="Bokeh App"
         layoutr = layout([self.p])
         doc.add_root(layoutr)
@@ -162,9 +160,13 @@ class space(base):
     def serve(self,port=5001):
         apps={"/": Application(FunctionHandler(self.make_document))}
         server=Server(apps,port=port)
-        server.start()
+        #server.start()
         server.run_until_shutdown()
-        #server.stop()
+        return self
+    
+    def interact(self):
+        self.button = Button(label='► Play', width=60)
+        self.button.on_click(self.update)
         return self
 
 class time(base):
@@ -214,14 +216,12 @@ class time(base):
         return self.p
 
 def display(pList,name="pviz.html",realtime=False,**kwargs):
-    #show(layout(children=[row([s for s in r ]) for r in pList],
-    #   sizing_mode="stretch_both"))
     layoutr=(layout([[s.p for s in r] for r in pList],
         sizing_mode="stretch_both"))
-
+    
     if not realtime:
         output_file(name)
         show(layoutr)
     else:
         curdoc().add_root(layoutr)
-
+    
