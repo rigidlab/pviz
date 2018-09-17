@@ -65,6 +65,7 @@ class space(base):
         self.length=0
 
     def plot(self,x,y,realtime=False,line=False,update_interval=100,slice=None,**kwargs):
+        source = self.source
         if realtime:
             self.current_x = x
             self.current_y = y
@@ -171,8 +172,8 @@ class time(base):
     """
     Figure class that plot state variables vs time
     """
-    def __init__(self,source,**kwargs):
-        super().__init__(source,**kwargs)
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
         #self.p.sizing_mode="stretch_both"
         self.p.xaxis.formatter=DatetimeTickFormatter(
             minsec=["%m/%d/%Y %H:%M:%S"],
@@ -185,19 +186,44 @@ class time(base):
             years=["%m/%d/%Y %H:%M:%S"],
         )
         self.p.xaxis.major_label_orientation = math.pi/4
+        self.current_state=ColumnDataSource(pd.DataFrame({}))
+        self.current_index=0
 
     def add_line(self,t,state,color=None):
         self.p.line(x=t,y=state,source=self.source,legend=dict(value=state),
             line_color=color)
 
-    def plot(self,t,state,color=None):
-        self.p.circle(x=t,y=state,source=self.source,legend=dict(value=state),
+    def plot(self,t,data,realtime=False,update_interval=100,color="black"):
+        source=self.source
+        if realtime:
+            self.current_t = t
+            self.current_data = data
+            self.current_state.data["index"]=[self.current_index]
+            self.current_state.data[self.current_t]=[self.df[self.current_t][self.current_index]]
+            self.current_state.data[self.current_data]=[self.df[self.current_data][self.current_index]]
+            source = self.current_state
+            self.current_index+=1
+            curdoc().add_periodic_callback(self.update,update_interval)
+        self.p.circle(x=t,y=data,source=self.current_state,legend=dict(value=data),
             line_color=color,fill_color=color)
-        self.p.line(x=t,y=state,source=self.source,legend=dict(value=state),
+        self.p.line(x=t,y=data,source=self.current_state,legend=dict(value=data),
             line_color=color)
         self.p.xaxis.axis_label = t
-        self.p.yaxis.axis_label = state
+        self.p.yaxis.axis_label = data
         return self
+
+    def update(self):
+        if self.current_index==len(self.df.index):
+            self.current_index=0
+        t = self.df[self.current_t][self.current_index]
+        data = self.df[self.current_data][self.current_index]
+        new_data={'index':[self.current_index],self.current_t:[t],
+                self.current_data:[data]}
+        #self.current_state.data['index']+=[self.current_index]
+        #self.current_state.data[self.current_t]+=[t]
+        #self.current_state.data[self.current_data]+=[data]
+        self.current_state.stream(new_data,300) 
+        self.current_index+=1
 
     def hover(self,hList):
         hov=HoverTool(tooltips=[(h,"@{}".format(h)) for h in hList])
@@ -213,7 +239,7 @@ class time(base):
     def get_figure(self):
         return self.p
 
-def display(pList,name="pviz.html",realtime=False,**kwargs):
+def tile_display(pList,name="pviz.html",realtime=False,**kwargs):
     layoutr=(layout([[s.p for s in r] for r in pList],
         sizing_mode="stretch_both"))
 
@@ -222,4 +248,3 @@ def display(pList,name="pviz.html",realtime=False,**kwargs):
         show(layoutr)
     else:
         curdoc().add_root(layoutr)
-
